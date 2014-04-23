@@ -1,0 +1,1 @@
+nvcc -ptx addKernel.cu -o addKernel.ptx
