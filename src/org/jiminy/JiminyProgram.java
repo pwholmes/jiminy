@@ -5,15 +5,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import org.jiminy.cuda.DecisionListKernel;
 import org.jiminy.domain.Value;
-import org.jiminy.domain.expression.Expression;
+import org.jiminy.domain.expression.DecisionListExpression;
 
 public class JiminyProgram {
    static JiminyProgram instance = null;
    private HashMap<String,Value> symbolTable = null;
-   private ArrayList<Expression> expressions = null;
+   private ArrayList<DecisionListExpression> decisionLists = null;
    private final int numVariables = 1;
-   private final int numExpressions = 1;
-   private final int maxExpressionComplexity = 1;
+   private final int numDecisionLists = 1;
+   private final int maxDLComplexity = 1;
    
    private JiminyProgram() {}
 
@@ -33,15 +33,15 @@ public class JiminyProgram {
    }
    
    public void execute() throws JiminyException, IOException {
-      System.out.println("Parameters: variables: " + numVariables + "; expressions: " + numExpressions + "; max expression complexity: " + maxExpressionComplexity);
+      System.out.println("Parameters: variables: " + numVariables + "; expressions: " + numDecisionLists + "; max expression complexity: " + maxDLComplexity);
       System.out.println("Generating data...");
 
       symbolTable = DataGenerator.generateSymbolTable(numVariables);
-      expressions = DataGenerator.generateExpressions(symbolTable, numExpressions, maxExpressionComplexity);
+      decisionLists = DataGenerator.generateDecisionLists(symbolTable, numDecisionLists, maxDLComplexity);
 
-      System.out.println("Exxecuting kernel...");
+      System.out.println("Executing kernel...");
       
-      DecisionListKernel kernel = new DecisionListKernel(symbolTable, expressions);
+      DecisionListKernel kernel = new DecisionListKernel(symbolTable, decisionLists);
       kernel.executeKernel();
       
       System.out.println("Program complete.");

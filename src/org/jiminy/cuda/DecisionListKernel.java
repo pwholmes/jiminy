@@ -2,9 +2,10 @@ package org.jiminy.cuda;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import org.jiminy.JiminyException;
+import org.jiminy.domain.DecisionListResult;
 import org.jiminy.domain.Value;
 import org.jiminy.domain.expression.DecisionListExpression;
-import org.jiminy.domain.expression.Expression;
 import jcuda.Pointer;
 import jcuda.Sizeof;
 import jcuda.driver.CUdeviceptr;
@@ -16,17 +17,17 @@ import jcuda.driver.JCudaDriver;
  */
 public class DecisionListKernel extends KernelEngine {
    private HashMap<String,Value> symbolTable;
-   private ArrayList<Expression> expressions;
-   private int[] hOutput = null;
+   private ArrayList<DecisionListExpression> decisionLists;
+   private ArrayList<Boolean> decisionListResults = new ArrayList<Boolean>();
    //private CUdeviceptr dSymbolTable = null;
    private CUdeviceptr dExpressionPointers = null;
    private CUdeviceptr[] dExpressions = null;
-   private CUdeviceptr dOutput = null;
+   private CUdeviceptr dResults = null;
    private int numExpressions = 0;
    
-   public DecisionListKernel(HashMap<String,Value> symbolTable, ArrayList<Expression> expressions) {
+   public DecisionListKernel(HashMap<String,Value> symbolTable, ArrayList<DecisionListExpression> decisionLists) {
       this.symbolTable = symbolTable;
-      this.expressions = expressions;
+      this.decisionLists = decisionLists;
    }
    
    @Override
@@ -55,10 +56,10 @@ public class DecisionListKernel extends KernelEngine {
       
       // Encode the expressions for transmission to the GPU
       ArrayList<String> encodedExpressions = new ArrayList<String>();
-      for (Expression e : expressions) {
-         DecisionListExpression dl = (DecisionListExpression)e;
+      for (DecisionListExpression dl : decisionLists)
          encodedExpressions.addAll(dl.encode2());
-      }
+
+encodedExpressions.set(0, "EB{CF{0.6870}==CF{0.6870}}T");      
       
       numExpressions = encodedExpressions.size();
       
@@ -81,14 +82,14 @@ public class DecisionListKernel extends KernelEngine {
       JCudaDriver.cuMemcpyHtoD(dExpressionPointers, Pointer.to(dExpressions), numExpressions * Sizeof.POINTER);
 
       // Allocate the output memory on the device
-      dOutput = new CUdeviceptr();
-      JCudaDriver.cuMemAlloc(dOutput, numExpressions * Sizeof.INT);
+      dResults = new CUdeviceptr();
+      JCudaDriver.cuMemAlloc(dResults, numExpressions * Sizeof.INT);
       
       // Wrap values in "Pointers"
       Pointer kernelParams = Pointer.to(
             Pointer.to(new int[]{numExpressions}),
             Pointer.to(dExpressionPointers),
-            Pointer.to(dOutput));
+            Pointer.to(dResults));
 
       return kernelParams;
    }
@@ -96,9 +97,34 @@ public class DecisionListKernel extends KernelEngine {
    @Override
    public void getResults() {
       System.out.println("Copying results from device...");
-      hOutput = new int[numExpressions];
-      JCudaDriver.cuMemcpyDtoH(Pointer.to(hOutput), dOutput, numExpressions * Sizeof.INT);
-      System.out.println("");
+      int[] hExpressionResults = new int[numExpressions];
+      JCudaDriver.cuMemcpyDtoH(Pointer.to(hExpressionResults), dResults, numExpressions * Sizeof.INT);
+      
+      // When we sent the data to the GPU, we separated each decision list into its component
+      // expressions and sent them separately.  Now we have to recombine the results into their
+      // owning decision list.  This is easy because both the decision lists and results are ordered.
+      int resultIndex = 0;
+      for (DecisionListExpression dl : decisionLists) {
+         DecisionListExpression node = dl;
+         boolean gotResult = false;
+         while (node != null) {
+            node.nodeResult = DecisionListResult.get(hExpressionResults[resultIndex++]);
+            if (node.nodeResult == DecisionListResult.ERROR)
+               throw new JiminyException("Error returned from kernel");
+            else if (!gotResult && node.nodeResult == DecisionListResult.TRUE) {
+               decisionListResults.add(true);
+               gotResult = true;
+            } else if (!gotResult && node.nodeResult == DecisionListResult.FALSE) {
+               decisionListResults.add(false);
+               gotResult = true;
+            }  
+            node = node.nextNode;
+         }
+      }
+
+      for (Boolean b : decisionListResults) {
+         System.out.println(b);
+      }
    }
 
    @Override

@@ -63,7 +63,6 @@ public class VariableExpression implements Expression {
       //sb.append(name);
       //sb.append("}");
 
-      sb.append("{");
       Value value = JiminyProgram.getInstance().getSymbolTable().get(name);
       switch(value.getType()) {
          case BOOLEAN:  sb.append("CB{"); break;

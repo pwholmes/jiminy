@@ -40,7 +40,7 @@ __global__ void processDecisionLists(int numExpressions, char **expressions, int
     if (idx < numExpressions) {
         char *expression = expressions[idx];
         DLNodeValue dlNodeValue;
-        parseDecisionListNode(expression, &dlNodeValue);
+        int offset = parseDecisionListNode(expression, &dlNodeValue);
         output[idx] = dlNodeValue;
     }
 }
@@ -65,7 +65,7 @@ __device__ int parseDecisionListNode(char *expression, DLNodeValue *dlNodeValue)
     Value value;
     
     offset += parseExpression(expression, &value);
-    
+
     // Check the return from the expression evaluation.  If it's false, then we ignore this
     // DL node and move on to the next one (so return IGNORE); if true, then we return the
     // node's value.
@@ -75,18 +75,17 @@ __device__ int parseDecisionListNode(char *expression, DLNodeValue *dlNodeValue)
     }
     if (value.booleanValue == 0) {
         *dlNodeValue = DL_IGNORE; 
-     }
-    
-    // Get the DL's value if this node's condition evaluates to true
-    char nodeValue = *expression;
-    if (nodeValue == 'T')
-        *dlNodeValue = DL_TRUE;
-    else if (nodeValue == 'F')
-        *dlNodeValue = DL_FALSE;
-    else {
-        *dlNodeValue = DL_ERROR;
-        return 0;
-    } 
+     } else {
+        char nodeValue = *(expression+offset);
+        if (nodeValue == 'T')
+            *dlNodeValue = DL_TRUE;
+        else if (nodeValue == 'F')
+            *dlNodeValue = DL_FALSE;
+        else {
+            *dlNodeValue = DL_ERROR;
+            return 0;
+        }
+     } 
     
     return offset;
 }
@@ -158,7 +157,7 @@ __device__ int parseVariableExpression(char *expression, Value *value) {
     offset++;
 
     char *token = expression+offset;
-    while (*(expression+offset) != '}'&& offset < OFFSET_SAFETY_MAX)
+    while (*(expression+offset) != '}' && offset < OFFSET_SAFETY_MAX)
         offset++;
     if (offset == OFFSET_SAFETY_MAX)
         return 0;
@@ -209,19 +208,15 @@ __device__ int parseIntegerConstant(char *expression, Value *value) {
         return 0;
     offset++;
 
-    char *token = expression+offset;
-    while (*(expression+offset) != '}'&& offset < OFFSET_SAFETY_MAX)
+    value->intValue = 0;
+    while (*(expression+offset) != '}' && offset < OFFSET_SAFETY_MAX) {
+        value->intValue = value->intValue * 10 + (*(expression+offset) - '0');  
         offset++;
+    }
     if (offset == OFFSET_SAFETY_MAX)
         return 0;
-    *(expression+offset) = '\0';
-    offset++;
-
-
-    // TODO: Parse token into INT
     value->type = DT_INT;
-    value->intValue = 3;
-
+    offset++;
 
     return offset;
 }
@@ -234,19 +229,22 @@ __device__ int parseFloatConstant(char *expression, Value *value) {
         return 0;
     offset++;
 
-    char *token = expression+offset;
-    while (*(expression+offset) != '}' && offset < OFFSET_SAFETY_MAX)
+    if (*(expression+offset) != '0')
+        return 0;
+    offset++;
+    if (*(expression+offset) != '.')
+        return 0;
+    offset++;
+    value->floatValue = 0;
+    int divisor = 10;
+    while (*(expression+offset) != '}' && offset < OFFSET_SAFETY_MAX) {
+        value->floatValue = value->floatValue + ((float)(*(expression+offset) - '0'))/divisor; 
         offset++;
+        int divisor = divisor * 10;
+    }
     if (offset == OFFSET_SAFETY_MAX)
         return 0;
-    *(expression+offset) = '\0';
     offset++;
-
-
-    // TODO: Parse token into FLOAT
-    value->type = DT_FLOAT;
-    value->floatValue = 3.14;
-
 
     return offset;
 }

@@ -32,8 +32,8 @@ public class DataGenerator {
       return symbolTable;
    }
 
-   public static ArrayList<Expression> generateExpressions(HashMap<String,Value> symbolTable, int numExpressions, int maxExpressionComplexity) {
-      ArrayList<Expression> expressions = new ArrayList<Expression>();
+   public static ArrayList<DecisionListExpression> generateDecisionLists(HashMap<String,Value> symbolTable, int numExpressions, int maxExpressionComplexity) {
+      ArrayList<DecisionListExpression> decisionLists = new ArrayList<DecisionListExpression>();
       
       // Get the set of variable names from the symbol table
       int numVars = symbolTable.size();
@@ -96,10 +96,10 @@ public class DataGenerator {
          lastNode.nextNode = new DecisionListExpression(defaultExpression, defaultValue);
 
          // Add the decision list to the list of expressions
-         expressions.add(firstNode);
+         decisionLists.add(firstNode);
       }
       
-      return expressions;
+      return decisionLists;
    }
 
    private static boolean isValidOperator(Operator operator, DataType type) {

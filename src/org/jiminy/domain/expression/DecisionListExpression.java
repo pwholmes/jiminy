@@ -2,12 +2,14 @@ package org.jiminy.domain.expression;
 
 import java.util.ArrayList;
 import org.jiminy.JiminyException;
+import org.jiminy.domain.DecisionListResult;
 import org.jiminy.domain.Value;
 
 public class DecisionListExpression implements Expression {
    public Expression condition;
    public boolean value;
    public DecisionListExpression nextNode = null;
+   public DecisionListResult nodeResult = DecisionListResult.ERROR;
    
    @SuppressWarnings("unused")
    private DecisionListExpression() {}
