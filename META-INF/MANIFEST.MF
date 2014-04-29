@@ -1,3 +1,4 @@
 Manifest-Version: 1.0
 Main-Class: org.jiminy.JiminyProgram
+Class-Path: jcuda-0.5.5.jar
 

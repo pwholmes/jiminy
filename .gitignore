@@ -213,3 +213,5 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+/jiminy.jar
+/pwh2125-jiminy.zip
