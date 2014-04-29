@@ -82,7 +82,7 @@ public class DataGenerator {
 
             // Add the new node to the end of the list
             if (lastNode != null)
-               lastNode.nextNode = node;
+               lastNode.setNextNode(node);
             lastNode = node;
             
             // If this is the first node, remember it
@@ -93,7 +93,7 @@ public class DataGenerator {
          // Add a default node to the end of the decision list
          Expression defaultExpression = new ConstantExpression(new Value(true));
          boolean defaultValue = generator.nextBoolean();
-         lastNode.nextNode = new DecisionListExpression(defaultExpression, defaultValue);
+         lastNode.setNextNode(new DecisionListExpression(defaultExpression, defaultValue));
 
          // Add the decision list to the list of expressions
          decisionLists.add(firstNode);
@@ -110,8 +110,12 @@ public class DataGenerator {
                 return false;
             return true;
          case FLOAT:
+            if (operator == Operator.LOGICAL_AND || operator == Operator.LOGICAL_OR)
+               return false;
             return true;
          case INT:
+            if (operator == Operator.LOGICAL_AND || operator == Operator.LOGICAL_OR)
+               return false;
             return true;
          case STRING:
             if (operator == Operator.EQUAL_TO || operator == Operator.NOT_EQUAL_TO)

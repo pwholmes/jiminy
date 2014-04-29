@@ -19,7 +19,7 @@ public class DecisionListKernel extends KernelEngine {
    private HashMap<String,Value> symbolTable;
    private ArrayList<DecisionListExpression> decisionLists;
    private ArrayList<Boolean> decisionListResults = new ArrayList<Boolean>();
-   //private CUdeviceptr dSymbolTable = null;
+   private CUdeviceptr dSymbolTable = null;
    private CUdeviceptr dExpressionPointers = null;
    private CUdeviceptr[] dExpressions = null;
    private CUdeviceptr dResults = null;
@@ -59,8 +59,6 @@ public class DecisionListKernel extends KernelEngine {
       for (DecisionListExpression dl : decisionLists)
          encodedExpressions.addAll(dl.encode2());
 
-encodedExpressions.set(0, "EB{CF{0.6870}==CF{0.6870}}T");      
-      
       numExpressions = encodedExpressions.size();
       
       System.out.println("Copying data to device...");
@@ -68,7 +66,6 @@ encodedExpressions.set(0, "EB{CF{0.6870}==CF{0.6870}}T");
       // Allocate device memory for the string for each expression
       dExpressions = new CUdeviceptr[numExpressions];
       for (int i = 0; i < numExpressions; i++) {
-         System.out.println(encodedExpressions.get(i));
          byte[] expr = encodedExpressions.get(i).getBytes();
          dExpressions[i] = new CUdeviceptr();
          JCudaDriver.cuMemAlloc(dExpressions[i], (expr.length + 1) * Sizeof.BYTE);
@@ -108,22 +105,18 @@ encodedExpressions.set(0, "EB{CF{0.6870}==CF{0.6870}}T");
          DecisionListExpression node = dl;
          boolean gotResult = false;
          while (node != null) {
-            node.nodeResult = DecisionListResult.get(hExpressionResults[resultIndex++]);
-            if (node.nodeResult == DecisionListResult.ERROR)
+            DecisionListResult nodeResult = DecisionListResult.get(hExpressionResults[resultIndex++]);
+            if (nodeResult == DecisionListResult.ERROR)
                throw new JiminyException("Error returned from kernel");
-            else if (!gotResult && node.nodeResult == DecisionListResult.TRUE) {
+            else if (!gotResult && nodeResult == DecisionListResult.TRUE) {
                decisionListResults.add(true);
                gotResult = true;
-            } else if (!gotResult && node.nodeResult == DecisionListResult.FALSE) {
+            } else if (!gotResult && nodeResult == DecisionListResult.FALSE) {
                decisionListResults.add(false);
                gotResult = true;
             }  
-            node = node.nextNode;
+            node = node.getNextNode();
          }
-      }
-
-      for (Boolean b : decisionListResults) {
-         System.out.println(b);
       }
    }
 

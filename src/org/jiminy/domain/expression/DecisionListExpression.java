@@ -2,21 +2,20 @@ package org.jiminy.domain.expression;
 
 import java.util.ArrayList;
 import org.jiminy.JiminyException;
-import org.jiminy.domain.DecisionListResult;
+import org.jiminy.domain.DataType;
 import org.jiminy.domain.Value;
 
 public class DecisionListExpression implements Expression {
-   public Expression condition;
-   public boolean value;
-   public DecisionListExpression nextNode = null;
-   public DecisionListResult nodeResult = DecisionListResult.ERROR;
+   private Expression condition = null;
+   private boolean nodeTrueValue = false;
+   private DecisionListExpression nextNode = null;
    
    @SuppressWarnings("unused")
    private DecisionListExpression() {}
    
    public DecisionListExpression(Expression condition, boolean value) {
       this.condition = condition;
-      this.value = value;
+      this.nodeTrueValue = value;
    }
 
    @Override
@@ -27,34 +26,17 @@ public class DecisionListExpression implements Expression {
    @Override
    public Value getValue() {
       if (condition.getValue().getBooleanValue() == true)
-         return new Value(value);
+         return new Value(nodeTrueValue);
       if (nextNode == null)
-         throw new JiminyException("Decision list lacks a default value, which is needed");
-      return new Value(value);
+         throw new JiminyException("Decision list lacks a default value");
+      return new Value(nodeTrueValue);
    }
 
-   public String encodeToString() {
-      StringBuilder sb = new StringBuilder();
-      sb.append("DL");
-
-      // Note that we *could* do this recursively, but that leads to an overly verbose and messy encoding
-      // Count the number of nodes in the DL
-      int numNodes = 0;
-      for (DecisionListExpression node = this; node != null; node = node.nextNode)
-         numNodes++;
-      sb.append(numNodes);
-      sb.append("{");
-      
-      // Loop through the nodes again and this time encode them 
-      for (DecisionListExpression node = this; node != null; node = node.nextNode) {
-         sb.append(node.condition.encode());
-         sb.append(node.value ? "T" : "F");
-         if (node.nextNode != null)
-            sb.append(",");
-      }
-
-      sb.append("}");
-      return sb.toString();
+   public DecisionListExpression getNextNode() {
+      return nextNode;
+   }
+   public void setNextNode(DecisionListExpression nextNode) {
+      this.nextNode = nextNode;
    }
 
    @Override
@@ -69,7 +51,7 @@ public class DecisionListExpression implements Expression {
       
       for (DecisionListExpression node = this; node != null; node = node.nextNode) {
          sb.append(node.condition.encode());
-         sb.append(node.value ? "T" : "F");
+         sb.append(node.nodeTrueValue ? "T" : "F");
       }
       
       sb.append("}");
@@ -81,8 +63,21 @@ public class DecisionListExpression implements Expression {
       ArrayList<String> expressions = new ArrayList<String>();
       
       for (DecisionListExpression node = this; node != null; node = node.nextNode)
-         expressions.add(node.condition.encode() + (node.value ? "T" : "F"));
+         expressions.add(node.condition.encode() + (node.nodeTrueValue ? "T" : "F"));
       
       return expressions;
+   }
+   
+   public boolean evaluate() {
+      if (condition == null)
+         throw new JiminyException("DL condition is null");
+      Value value = condition.getValue();
+      if (value.getType() != DataType.BOOLEAN)
+         throw new JiminyException("Expression evaluates to illegal type (should be boolean): " + value.getType().toString());
+      if (value.getBooleanValue())
+         return nodeTrueValue;
+      if (nextNode == null)
+         throw new JiminyException("Decision list lacks default node");
+      return nextNode.evaluate();
    }
 }

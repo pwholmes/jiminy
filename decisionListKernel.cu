@@ -239,11 +239,12 @@ __device__ int parseFloatConstant(char *expression, Value *value) {
     int divisor = 10;
     while (*(expression+offset) != '}' && offset < OFFSET_SAFETY_MAX) {
         value->floatValue = value->floatValue + ((float)(*(expression+offset) - '0'))/divisor; 
+        divisor = divisor * 10;
         offset++;
-        int divisor = divisor * 10;
     }
     if (offset == OFFSET_SAFETY_MAX)
         return 0;
+    value->type = DT_FLOAT;
     offset++;
 
     return offset;

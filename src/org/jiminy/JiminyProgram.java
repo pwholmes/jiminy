@@ -11,9 +11,9 @@ public class JiminyProgram {
    static JiminyProgram instance = null;
    private HashMap<String,Value> symbolTable = null;
    private ArrayList<DecisionListExpression> decisionLists = null;
-   private final int numVariables = 1;
-   private final int numDecisionLists = 1;
-   private final int maxDLComplexity = 1;
+   private final int numVariables = 100;
+   private final int numDecisionLists = 1000;
+   private final int maxDLLength = 3;
    
    private JiminyProgram() {}
 
@@ -33,18 +33,29 @@ public class JiminyProgram {
    }
    
    public void execute() throws JiminyException, IOException {
-      System.out.println("Parameters: variables: " + numVariables + "; expressions: " + numDecisionLists + "; max expression complexity: " + maxDLComplexity);
+      System.out.println("Parameters: variables: " + numVariables + "; decision lists: " + numDecisionLists + "; max DL length: " + maxDLLength);
       System.out.println("Generating data...");
 
       symbolTable = DataGenerator.generateSymbolTable(numVariables);
-      decisionLists = DataGenerator.generateDecisionLists(symbolTable, numDecisionLists, maxDLComplexity);
+      decisionLists = DataGenerator.generateDecisionLists(symbolTable, numDecisionLists, maxDLLength);
 
       System.out.println("Executing kernel...");
+      long start = System.nanoTime();
       
       DecisionListKernel kernel = new DecisionListKernel(symbolTable, decisionLists);
       kernel.executeKernel();
       
-      System.out.println("Program complete.");
+      long stop = System.nanoTime();
+      System.out.println("Kernel execution complete, time elapsed = " + (stop - start)/1000000 + " ms");
+
+      System.out.println("Executing on host...");
+      start = System.nanoTime();
+      
+      for (DecisionListExpression dl : decisionLists)
+         dl.evaluate();
+      
+      stop = System.nanoTime();
+      System.out.println("Host execution complete, time elapsed = " + (stop - start)/1000000 + " ms");
    }
    
    public static void main(String args[]) {

@@ -40,16 +40,30 @@ public class BinaryExpression implements Expression {
    public Value getValue() {
       Value value1 = operand1.getValue();
       Value value2 = operand2.getValue();
+      
+      // For now we will only allow comparisons of values with the same data type
+      if (value1.getType() != value2.getType())
+         throw new JiminyException("Type mismatch: attempting to compare value of type " + value1.getType() + " to value of type " + value2.getType() + ".");
 
       switch (operator) {
          case EQUAL_TO:
-            if (value1.getType() == DataType.INT && value2.getType() == DataType.FLOAT)
-               return new Value(value1.getIntValue() == value2.getFloatValue());
-            if (value1.getType() == DataType.FLOAT && value2.getType() == DataType.INT)
-               return new Value(value1.getFloatValue() == value2.getIntValue());
-            if (value1.getType() != value2.getType())
-               throw new JiminyException("Type mismatch: attempting to compare value of type " + value1.getType() + " to value of type " + value2.getType() + ".");
             return new Value(value1.equals(value2));
+         case GREATER_THAN:
+            return new Value(value1.compareTo(value2) > 0);
+         case GREATER_THAN_OR_EQUAL_TO:
+            return new Value(value1.compareTo(value2) >= 0);
+         case LESS_THAN:
+            return new Value(value1.compareTo(value2) < 0);
+         case LESS_THAN_OR_EQUAL_TO:
+            return new Value(value1.compareTo(value2) <= 0);
+         case LOGICAL_AND:
+         case LOGICAL_OR:
+            if (value1.getType() == DataType.BOOLEAN)
+               return new Value(value1.getBooleanValue() && value2.getBooleanValue());
+            else
+               throw new JiminyException("Invalid operator: " + operator.toString() + " for type: " + value1.getType().toString());
+         case NOT_EQUAL_TO:
+            return new Value(!value1.equals(value2));
          default: // should never happen
             throw new JiminyException("Unknown binary operator: " + operator);
       }
@@ -65,4 +79,5 @@ public class BinaryExpression implements Expression {
       sb.append("}");
       return sb.toString();
    }
+   
 }
